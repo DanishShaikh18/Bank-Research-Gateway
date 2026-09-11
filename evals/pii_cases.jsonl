@@ -1,0 +1,5 @@
+{"id": "pii_001", "text": "Contact Rahul Sharma at rahul.sharma@examplebank.com regarding account 402918239.", "entities": [{"type": "PERSON", "value": "Rahul Sharma"}, {"type": "EMAIL", "value": "rahul.sharma@examplebank.com"}, {"type": "ACCOUNT_NO", "value": "402918239"}]}
+{"id": "pii_002", "text": "What is our policy on passkeys? My employee badge ID is EMP-84920.", "entities": [{"type": "EMPLOYEE_ID", "value": "EMP-84920"}]}
+{"id": "pii_003", "text": "Review application 839201 submitted by Priya Patel from phone +1-555-019-2834.", "entities": [{"type": "APPLICATION_ID", "value": "839201"}, {"type": "PERSON", "value": "Priya Patel"}, {"type": "PHONE", "value": "+1-555-019-2834"}]}
+{"id": "pii_004", "text": "Draft an email to Amit Verma confirming receipt of loan file LN-2026-9912.", "entities": [{"type": "PERSON", "value": "Amit Verma"}, {"type": "APPLICATION_ID", "value": "LN-2026-9912"}]}
+{"id": "pii_005", "text": "Summarize the differences between RBAC and ABAC for cloud infrastructure.", "entities": []}

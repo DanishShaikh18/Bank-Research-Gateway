@@ -1,0 +1,35 @@
+# Virtual Environments
+.venv/
+venv/
+ENV/
+env/
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+!.env.example
+
+# Docs for RAG / Internal Bank Data (prevent accidental commit of proprietary/internal docs)
+data/internal_docs/
+data/
+
+# Local Vector Database & Storage
+qdrant_storage/
+*.db
+*.sqlite
+
+# Python bytecode & cache
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytest_cache/
+.coverage
+htmlcov/
+
+# IDE & OS files
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
