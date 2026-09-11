@@ -2,8 +2,7 @@ import os
 import re
 from dataclasses import dataclass
 from typing import List, Dict, Optional, Tuple
-from qdrant_client import QdrantClient
-from qdrant_client.models import Distance, VectorParams, PointStruct, ScoredPoint, QueryRequest, QueryResponse
+import chromadb
 from app.config import config
 from app.privacy import detect_sensitive_spans
 
@@ -77,11 +76,14 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
         from google import genai
         from google.genai import types
         client = genai.Client(api_key=config.google_api_key)
-        response = client.models.embed_content(
-            model=config.gemini_embedding_model,
-            contents=texts
-        )
-        return [e.values for e in response.embeddings]
+        all_embeddings = []
+        for text in texts:
+            response = client.models.embed_content(
+                model=config.gemini_embedding_model,
+                contents=text
+            )
+            all_embeddings.extend([e.values for e in response.embeddings])
+        return all_embeddings
     else:
         # Offline mock embedder for testing when API key is unset
         import hashlib
@@ -99,82 +101,73 @@ def generate_embeddings(texts: List[str]) -> List[List[float]]:
             embeddings.append(vec)
         return embeddings
 
-class QdrantRetriever:
+class ChromaRetriever:
     def __init__(self, collection_name: str = "internal_knowledge"):
         self.collection_name = collection_name
-        if config.qdrant_url == ":memory:":
-            self.client = QdrantClient(":memory:")
-        else:
-            self.client = QdrantClient(url=config.qdrant_url, api_key=config.qdrant_api_key)
-        self.dimension = 768
+        self.client = chromadb.PersistentClient(path=config.chroma_persist_directory)
         self._ensure_collection()
         
     def _ensure_collection(self):
-        if not self.client.collection_exists(self.collection_name):
-            self.client.create_collection(
-                collection_name=self.collection_name,
-                vectors_config=VectorParams(size=self.dimension, distance=Distance.COSINE)
-            )
+        self.collection = self.client.get_or_create_collection(
+            name=self.collection_name,
+            metadata={"hnsw:space": "cosine"}
+        )
 
     def ingest(self, chunks: List[DocumentChunk]):
         if not chunks: return
         
         texts = [c.content for c in chunks]
         embeddings = generate_embeddings(texts)
+        ids = [str(hash(c.id)) for c in chunks] # Chroma uses string IDs
+        metadatas = [{"document_name": c.document_name, "section": c.section} for c in chunks]
         
-        points = []
-        for i, chunk in enumerate(chunks):
-            points.append(PointStruct(
-                id=hash(chunk.id) & ((1<<63)-1), # Qdrant requires unsigned int or UUID
-                vector=embeddings[i],
-                payload={
-                    "id": chunk.id,
-                    "document_name": chunk.document_name,
-                    "section": chunk.section,
-                    "content": chunk.content
-                }
-            ))
-            
-        self.client.upsert(collection_name=self.collection_name, points=points)
+        self.collection.add(
+            ids=ids,
+            embeddings=embeddings,
+            documents=texts,
+            metadatas=metadatas
+        )
 
     def search_hybrid(self, query: str, top_k: int = 5) -> List[DocumentChunk]:
         """Hybrid search combining semantic vector search and simple keyword filtering/scoring."""
-        # Note: True hybrid search in Qdrant can use Query API.
-        # For simplicity in this offline capable setup:
+        query_vector = generate_embeddings([query])[0]
         
         # 1. Dense Search
-        query_vector = generate_embeddings([query])[0]
-        dense_response = self.client.query_points(
-            collection_name=self.collection_name,
-            query=query_vector,
-            limit=top_k * 2 # Get more for reranking
+        dense_results = self.collection.query(
+            query_embeddings=[query_vector],
+            n_results=top_k * 2
         )
         
+        if not dense_results["ids"] or not dense_results["ids"][0]:
+            return []
+            
         # 2. Simple Reciprocal Rank Fusion / Keyword Boost
         query_words = set(query.lower().split())
         scored_chunks = []
         
-        for i, res in enumerate(dense_response.points):
+        ids = dense_results["ids"][0]
+        documents = dense_results["documents"][0]
+        metadatas = dense_results["metadatas"][0]
+        
+        for i in range(len(ids)):
             dense_score = 1.0 / (i + 1) # RRF dense component
             
-            # Lexical component: simple keyword matching in content
-            content_lower = res.payload["content"].lower()
+            content_lower = documents[i].lower()
             keyword_matches = sum(1 for w in query_words if w in content_lower and len(w) > 3)
             lexical_score = keyword_matches * 0.5 
             
             final_score = dense_score + lexical_score
-            scored_chunks.append((final_score, res))
+            scored_chunks.append((final_score, i))
             
-        # Sort and take top_k
         scored_chunks.sort(key=lambda x: x[0], reverse=True)
-        top_results = [item[1] for item in scored_chunks[:top_k]]
+        top_indices = [item[1] for item in scored_chunks[:top_k]]
         
         return [DocumentChunk(
-            id=res.payload["id"],
-            document_name=res.payload["document_name"],
-            section=res.payload["section"],
-            content=res.payload["content"]
-        ) for res in top_results]
+            id=ids[i],
+            document_name=metadatas[i]["document_name"],
+            section=metadatas[i]["section"],
+            content=documents[i]
+        ) for i in top_indices]
 
 def inspect_retrieved_context(chunks: List[DocumentChunk]) -> List[DocumentChunk]:
     """Ensures no sensitive data slipped through into the RAG context."""

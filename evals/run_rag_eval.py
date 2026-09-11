@@ -5,13 +5,13 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.rag import QdrantRetriever
+from app.rag import ChromaRetriever
 
 def run_eval():
     print("Running RAG Evaluation...")
     cases_path = os.path.join(os.path.dirname(__file__), 'rag_cases.jsonl')
     
-    retriever = QdrantRetriever()
+    retriever = ChromaRetriever()
     
     total_cases = 0
     correct_document = 0

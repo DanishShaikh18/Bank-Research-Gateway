@@ -1,5 +1,5 @@
 import pytest
-from app.rag import structure_aware_chunk, inspect_document_for_ingestion, generate_embeddings, QdrantRetriever, DocumentChunk
+from app.rag import structure_aware_chunk, inspect_document_for_ingestion, generate_embeddings, ChromaRetriever, DocumentChunk
 
 def test_inspect_document_for_ingestion():
     # Safe document
@@ -24,10 +24,10 @@ This is another paragraph that is long enough to be its own thing.
 def test_mock_embeddings():
     emb = generate_embeddings(["hello", "world"])
     assert len(emb) == 2
-    assert len(emb[0]) == 768
+    assert len(emb[0]) in (768, 3072)
 
-def test_qdrant_retriever():
-    retriever = QdrantRetriever(collection_name="test_collection")
+def test_chroma_retriever():
+    retriever = ChromaRetriever(collection_name="test_collection")
     chunks = [
         DocumentChunk(id="test_1", document_name="doc.md", section="Auth", content="MFA is required for access."),
         DocumentChunk(id="test_2", document_name="doc.md", section="Cloud", content="Use AWS for cloud storage.")

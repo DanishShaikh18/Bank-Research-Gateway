@@ -9,7 +9,7 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.rag import QdrantRetriever, structure_aware_chunk, inspect_document_for_ingestion
+from app.rag import ChromaRetriever, structure_aware_chunk, inspect_document_for_ingestion
 
 def main():
     print("Bank Research Gateway RAG Ingestion Pipeline")
@@ -19,7 +19,7 @@ def main():
         print(f"Error: Directory {docs_dir} not found.")
         return
         
-    retriever = QdrantRetriever()
+    retriever = ChromaRetriever()
     total_chunks = 0
     
     for filename in os.listdir(docs_dir):

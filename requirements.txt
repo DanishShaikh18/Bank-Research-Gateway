@@ -3,7 +3,7 @@ google-adk>=2.9.0
 google-genai>=2.23.0
 
 # Vector Database & Retrieval
-qdrant-client>=1.19.0
+chromadb>=0.5.23
 
 # Public Research
 tavily-python>=0.8.2
