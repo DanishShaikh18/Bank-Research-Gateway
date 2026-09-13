@@ -1,21 +1,8 @@
 import pytest
-from app.rag import structure_aware_chunk, inspect_document_for_ingestion, generate_embeddings, ChromaRetriever, DocumentChunk
-
-def test_inspect_document_for_ingestion():
-    # Safe document
-    safe_doc = "This is a bank policy regarding MFA and ABAC."
-    assert inspect_document_for_ingestion(safe_doc) is True
-    
-    # Unsafe document (contains a 9-digit account number)
-    unsafe_doc = "This policy applies to account 123456789."
-    assert inspect_document_for_ingestion(unsafe_doc) is False
+from app.rag import structure_aware_chunk, generate_embeddings, ChromaRetriever, DocumentChunk
 
 def test_structure_aware_chunk():
-    md = """# Header 1
-This is a paragraph.
-## Header 2
-This is another paragraph that is long enough to be its own thing.
-"""
+    md = """# Header 1\nThis is a paragraph.\n## Header 2\nThis is another paragraph that is long enough to be its own thing.\n"""
     chunks = structure_aware_chunk(md, "test.md", max_tokens=10)
     assert len(chunks) > 0
     assert chunks[0].document_name == "test.md"

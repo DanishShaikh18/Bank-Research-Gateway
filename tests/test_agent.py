@@ -1,32 +1,55 @@
 import pytest
-from app.agent import BankResearchGateway
+from app.agent import (
+    before_model_callback,
+    before_tool_callback,
+    after_tool_callback,
+    after_model_callback,
+    MockContext,
+    MockLLMRequest,
+    MockAgentResponse,
+    MockTool
+)
 
-def test_direct_path():
-    gateway = BankResearchGateway(use_mock=True)
-    res = gateway.process_request("What is an API?")
-    assert "direct answer" in res
-
-def test_public_research_path():
-    gateway = BankResearchGateway(use_mock=True)
-    # The term 'web' or 'trend' triggers the public research mock
-    res = gateway.process_request("Research web trends for Rahul Sharma.")
+def test_before_model_callback():
+    ctx = MockContext()
+    req = MockLLMRequest("Hi, my name is Priya Patel and my account is 123456789. ID is EMP-12345.")
+    before_model_callback(ctx, req)
     
-    # Verify the final response detokenized Rahul Sharma back
-    assert "Rahul Sharma" in res
-    assert "Public Research Data" in res
-
-def test_internal_rag_path():
-    gateway = BankResearchGateway(use_mock=True)
-    # The term 'policy' triggers the internal mock
-    res = gateway.process_request("What is our MFA policy? Contact Amit Verma.")
+    # Check that prompt was redacted/tokenized
+    assert "Priya Patel" not in req.prompt
+    assert "123456789" not in req.prompt
+    assert "EMP-12345" not in req.prompt
+    assert "<PERSON_001>" in req.prompt
+    assert "<ACCOUNT_NO_001>" in req.prompt
+    assert "[REDACTED]" in req.prompt
     
-    assert "Internal Policy Data" in res
-    assert "Amit Verma" in res
+    # Check session state
+    assert "fernet_key" in ctx.session.state
+    assert "<PERSON_001>" in ctx.session.state["pii_tokens"]
 
-def test_dlp_redaction_flow():
-    gateway = BankResearchGateway(use_mock=True)
-    # EMP-12345 should be redacted and never make it back
-    res = gateway.process_request("What is an API? My employee id is EMP-12345.")
+def test_before_tool_callback():
+    tool = MockTool("public_research")
+    args = {"query": "Find info on Rahul Sharma"}
     
-    assert "EMP-12345" not in res
-    assert "direct answer" in res
+    res = before_tool_callback(tool, args, None)
+    assert res is not None
+    assert "BLOCKED" in res
+    assert "PERSON" in res
+
+def test_after_tool_callback():
+    res = after_tool_callback(None, None, None, "This site mentions Rahul Sharma.")
+    assert "Rahul Sharma" not in res
+    assert "[REDACTED]" in res
+
+def test_after_model_callback():
+    ctx = MockContext()
+    req = MockLLMRequest("Priya Patel")
+    before_model_callback(ctx, req) # setup tokens
+    
+    # Model generates response with a token and a raw sensitive value
+    res = MockAgentResponse("I found info for <PERSON_001>. Also new PII: 123456789.")
+    after_model_callback(ctx, res)
+    
+    assert "Priya Patel" in res.text
+    assert "123456789" not in res.text
+    assert "[REDACTED]" in res.text

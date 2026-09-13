@@ -1,16 +1,14 @@
-"""Agent Tools: public_research (Tavily) and internal_knowledge_search (Qdrant hybrid)."""
+"""Agent Tools: public_research (Tavily) and internal_knowledge_search (Chroma hybrid)."""
 import logging
 from typing import Dict, Any, List
 
 from app.config import config
-from app.privacy import TokenVault, inspect_outbound_payload, detect_sensitive_spans
 from app.rag import ChromaRetriever
 
 logger = logging.getLogger(__name__)
 
 class ResearchTools:
-    def __init__(self, vault: TokenVault, retriever: ChromaRetriever):
-        self.vault = vault
+    def __init__(self, retriever: ChromaRetriever):
         self.retriever = retriever
 
     def public_research(self, query: str) -> Dict[str, Any]:
@@ -23,13 +21,6 @@ class ResearchTools:
         Returns:
             A dictionary containing retrieved sources or an error message.
         """
-        # 1. Outbound DLP Inspection
-        safe, msg = inspect_outbound_payload(query, self.vault)
-        if not safe:
-            logger.warning(f"public_research blocked: {msg}")
-            return {"error": "Request blocked by outbound DLP.", "details": msg}
-            
-        # 2. Execute Tavily Search
         if not config.tavily_api_key:
             # Fallback for testing when key is not present
             return {
@@ -50,21 +41,12 @@ class ResearchTools:
                 include_raw_content=False
             )
             
-            # 3. Normalize Response
             sources = []
             for res in response.get("results", []):
-                content = res.get("content", "")
-                
-                # External response inspection (inbound DLP)
-                # If unexpected sensitive data is returned by Tavily, redact it
-                spans = detect_sensitive_spans(content)
-                for span in reversed(spans):
-                    content = content[:span.start] + "[REDACTED]" + content[span.end:]
-                    
                 sources.append({
                     "title": res.get("title", ""),
                     "url": res.get("url", ""),
-                    "content": content,
+                    "content": res.get("content", ""),
                     "score": res.get("score", 0.0)
                 })
                 

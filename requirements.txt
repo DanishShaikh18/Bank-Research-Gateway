@@ -2,6 +2,10 @@
 google-adk>=2.9.0
 google-genai>=2.23.0
 
+# Privacy & Security
+spacy>=3.7.0
+cryptography>=41.0.0
+
 # Vector Database & Retrieval
 chromadb>=0.5.23
 

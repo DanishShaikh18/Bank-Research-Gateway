@@ -150,7 +150,7 @@ class ChromaRetriever:
         metadatas = dense_results["metadatas"][0]
         
         for i in range(len(ids)):
-            dense_score = 1.0 / (i + 1) # RRF dense component
+            dense_score = 1.0 / (i + 1) # hybrid weighted score dense component
             
             content_lower = documents[i].lower()
             keyword_matches = sum(1 for w in query_words if w in content_lower and len(w) > 3)

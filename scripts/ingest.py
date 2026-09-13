@@ -1,7 +1,7 @@
 """Ingestion entrypoint script for Bank Research Gateway RAG corpus.
 
-Inspects documents for PII/sensitive data (ingestion DLP), chunks them using
-structure-aware markdown parsing, embeds with Gemini Embedding 2 (or mock), and upserts into Qdrant.
+Inspects documents for PII/sensitive data (ingestion PII Inspection), chunks them using
+structure-aware markdown parsing, embeds with Gemini Embedding 2 (or mock), and upserts into ChromaDB.
 """
 import os
 import sys
@@ -9,7 +9,13 @@ import sys
 # Add parent directory to path
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.rag import ChromaRetriever, structure_aware_chunk, inspect_document_for_ingestion
+from app.rag import ChromaRetriever, structure_aware_chunk
+from app.privacy import detect_sensitive_spans, pii_density
+
+PII_DENSITY_QUARANTINE_THRESHOLD = 0.05
+
+def should_quarantine(density: float) -> bool:
+    return density >= PII_DENSITY_QUARANTINE_THRESHOLD
 
 def main():
     print("Bank Research Gateway RAG Ingestion Pipeline")
@@ -32,16 +38,25 @@ def main():
             
         print(f"Processing {filename}...")
         
-        # 1. Ingestion DLP
-        if not inspect_document_for_ingestion(content):
-            print(f"  -> REJECTED: Sensitive data found in {filename}. Quarantined.")
+        # 1. Ingestion PII Inspection
+        spans = detect_sensitive_spans(content)
+        density = pii_density(content, spans)
+        
+        if should_quarantine(density):
+            print(f"  -> REJECTED: Sensitive data density {density:.2f} exceeds threshold. Quarantined.")
             continue
+            
+        # Redact any found spans in-place before chunking
+        if spans:
+            for span in reversed(spans):
+                replacement = f"[REDACTED_{span.type}]"
+                content = content[:span.start] + replacement + content[span.end:]
             
         # 2. Structure-aware chunking
         chunks = structure_aware_chunk(content, filename)
         print(f"  -> Generated {len(chunks)} chunks.")
         
-        # 3. Upsert to Qdrant
+        # 3. Upsert to ChromaDB
         retriever.ingest(chunks)
         total_chunks += len(chunks)
         

@@ -1,0 +1,6 @@
+{
+  "metrics": [
+    "tool_trajectory_avg_score",
+    "response_match_score"
+  ]
+}

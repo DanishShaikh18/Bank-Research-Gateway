@@ -2,10 +2,10 @@ import json
 import sys
 import os
 
-# Add the parent directory to sys.path so we can import app
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.privacy import detect_sensitive_spans, TokenVault, sanitize_input, inspect_outbound_payload
+from app.privacy import detect_sensitive_spans, REDACT_TYPES, new_session_key, encrypt_span
+from app.agent import MockContext, MockLLMRequest, before_model_callback, MockTool, before_tool_callback
 
 def run_eval():
     print("Running Privacy Evaluation...")
@@ -38,8 +38,11 @@ def run_eval():
                     correct_detections += 1
                     
             # 2. Outbound Leakage Evaluation
-            vault = TokenVault()
-            sanitized = sanitize_input(text, vault)
+            # Use before_model_callback to sanitize
+            ctx = MockContext()
+            req = MockLLMRequest(text)
+            before_model_callback(ctx, req)
+            sanitized = req.prompt
             
             # Check if any expected entity is still in the sanitized text
             for e in expected_entities:
@@ -47,10 +50,11 @@ def run_eval():
                     print(f"LEAKAGE DETECTED in case {case['id']}: {e['value']}")
                     leakage_failures += 1
             
-            # Check outbound inspector
-            safe, _ = inspect_outbound_payload(sanitized, vault)
-            if not safe:
-                # Our inspector should say it's safe because we just sanitized it
+            # Check outbound inspector (before_tool_callback)
+            tool = MockTool("public_research")
+            args = {"query": sanitized}
+            blocked = before_tool_callback(tool, args, None)
+            if blocked:
                 print(f"FALSE POSITIVE BLOCK in case {case['id']}")
                 
     precision = correct_detections / detected_entities if detected_entities else 1.0
@@ -62,6 +66,7 @@ def run_eval():
     print(f"Precision: {precision:.2f}")
     print(f"Recall: {recall:.2f}")
     print(f"F1 Score: {f1:.2f}")
+    print("Note: PERSON recall is bounded by spaCy's model quality by design.")
     print(f"Outbound Leakage Rate: {leakage_failures / total_entities if total_entities else 0.0:.2%}")
     
     assert leakage_failures == 0, "Outbound leakage test failed!"
