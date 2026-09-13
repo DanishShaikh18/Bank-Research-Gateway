@@ -71,35 +71,19 @@ def structure_aware_chunk(markdown_text: str, document_name: str, max_tokens: in
     return chunks
 
 def generate_embeddings(texts: List[str]) -> List[List[float]]:
-    """Generates embeddings using Gemini if key is available, else mock embeddings."""
-    if config.google_api_key:
-        from google import genai
-        from google.genai import types
-        client = genai.Client(api_key=config.google_api_key)
-        all_embeddings = []
-        for text in texts:
-            response = client.models.embed_content(
-                model=config.gemini_embedding_model,
-                contents=text
-            )
-            all_embeddings.extend([e.values for e in response.embeddings])
-        return all_embeddings
-    else:
-        # Offline mock embedder for testing when API key is unset
-        import hashlib
-        DIM = 768 # Standard Gemini embedding dim
-        embeddings = []
-        for text in texts:
-            # Deterministic mock based on hash
-            val = int(hashlib.md5(text.encode()).hexdigest()[:8], 16) / 0xFFFFFFFF
-            # Just create a semi-random but deterministic vector
-            vec = [(val * i % 1.0) - 0.5 for i in range(DIM)]
-            # Normalize
-            norm = sum(x*x for x in vec) ** 0.5
-            if norm > 0:
-                vec = [x/norm for x in vec]
-            embeddings.append(vec)
-        return embeddings
+    if not config.google_api_key:
+        raise ValueError("google_api_key is required for embeddings")
+    from google import genai
+    from google.genai import types
+    client = genai.Client(api_key=config.google_api_key)
+    all_embeddings = []
+    for text in texts:
+        response = client.models.embed_content(
+            model=config.gemini_embedding_model,
+            contents=text
+        )
+        all_embeddings.extend([e.values for e in response.embeddings])
+    return all_embeddings
 
 class ChromaRetriever:
     def __init__(self, collection_name: str = "internal_knowledge"):

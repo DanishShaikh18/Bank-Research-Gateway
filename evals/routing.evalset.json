@@ -1,58 +1,112 @@
-{
-  "test_cases": [
-    {
-      "id": "direct_1",
-      "user_input": "What is an API?",
-      "expected_tool_trajectory": []
-    },
-    {
-      "id": "direct_2",
-      "user_input": "Can you explain what a database is?",
-      "expected_tool_trajectory": []
-    },
-    {
-      "id": "internal_rag_1",
-      "user_input": "What is our MFA policy?",
-      "expected_tool_trajectory": [
-        {"tool_name": "internal_knowledge_search"}
-      ]
-    },
-    {
-      "id": "internal_rag_2",
-      "user_input": "What are the rules for AI usage internally?",
-      "expected_tool_trajectory": [
-        {"tool_name": "internal_knowledge_search"}
-      ]
-    },
-    {
-      "id": "external_search_1",
-      "user_input": "Research current trends in web passkeys.",
-      "expected_tool_trajectory": [
-        {"tool_name": "public_research"}
-      ]
-    },
-    {
-      "id": "external_search_2",
-      "user_input": "Find the latest cybersecurity advisories online.",
-      "expected_tool_trajectory": [
-        {"tool_name": "public_research"}
-      ]
-    },
-    {
-      "id": "combined_1",
-      "user_input": "Compare our MFA policy to public web passkey trends.",
-      "expected_tool_trajectory": [
-        {"tool_name": "internal_knowledge_search"},
-        {"tool_name": "public_research"}
-      ]
-    },
-    {
-      "id": "combined_2",
-      "user_input": "What does our AI usage policy say compared to external AI frameworks?",
-      "expected_tool_trajectory": [
-        {"tool_name": "internal_knowledge_search"},
-        {"tool_name": "public_research"}
-      ]
-    }
-  ]
-}
+[
+  {
+    "name": "direct_1",
+    "data": [
+      {
+        "query": "What is an API?",
+        "expected_tool_use": []
+      }
+    ]
+  },
+  {
+    "name": "direct_2",
+    "data": [
+      {
+        "query": "Can you explain what a database is?",
+        "expected_tool_use": []
+      }
+    ]
+  },
+  {
+    "name": "internal_rag_1",
+    "data": [
+      {
+        "query": "What is our MFA policy?",
+        "expected_tool_use": [
+          {
+            "tool_name": "internal_knowledge_search",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "internal_rag_2",
+    "data": [
+      {
+        "query": "What are the rules for AI usage internally?",
+        "expected_tool_use": [
+          {
+            "tool_name": "internal_knowledge_search",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "external_search_1",
+    "data": [
+      {
+        "query": "Research current trends in web passkeys.",
+        "expected_tool_use": [
+          {
+            "tool_name": "public_research",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "external_search_2",
+    "data": [
+      {
+        "query": "Find the latest cybersecurity advisories online.",
+        "expected_tool_use": [
+          {
+            "tool_name": "public_research",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "combined_1",
+    "data": [
+      {
+        "query": "Compare our MFA policy to public web passkey trends.",
+        "expected_tool_use": [
+          {
+            "tool_name": "internal_knowledge_search",
+            "tool_input": {}
+          },
+          {
+            "tool_name": "public_research",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  },
+  {
+    "name": "combined_2",
+    "data": [
+      {
+        "query": "What does our AI usage policy say compared to external AI frameworks?",
+        "expected_tool_use": [
+          {
+            "tool_name": "internal_knowledge_search",
+            "tool_input": {}
+          },
+          {
+            "tool_name": "public_research",
+            "tool_input": {}
+          }
+        ]
+      }
+    ]
+  }
+]
