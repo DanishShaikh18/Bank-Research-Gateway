@@ -1,7 +1,5 @@
-import os
-import re
 from dataclasses import dataclass
-from typing import List, Dict, Optional, Tuple
+from typing import List, Dict
 import chromadb
 from app.config import config
 from app.privacy import detect_sensitive_spans
@@ -70,20 +68,21 @@ def structure_aware_chunk(markdown_text: str, document_name: str, max_tokens: in
     add_chunk()
     return chunks
 
+_embedding_model_instance = None
+
+def get_embedding_model():
+    global _embedding_model_instance
+    if _embedding_model_instance is None:
+        from sentence_transformers import SentenceTransformer
+        _embedding_model_instance = SentenceTransformer(config.embedding_model)
+    return _embedding_model_instance
+
 def generate_embeddings(texts: List[str]) -> List[List[float]]:
-    if not config.google_api_key:
-        raise ValueError("google_api_key is required for embeddings")
-    from google import genai
-    from google.genai import types
-    client = genai.Client(api_key=config.google_api_key)
-    all_embeddings = []
-    for text in texts:
-        response = client.models.embed_content(
-            model=config.gemini_embedding_model,
-            contents=text
-        )
-        all_embeddings.extend([e.values for e in response.embeddings])
-    return all_embeddings
+    if not texts:
+        return []
+    model = get_embedding_model()
+    embeddings = model.encode(texts, normalize_embeddings=True)
+    return embeddings.tolist()
 
 class ChromaRetriever:
     def __init__(self, collection_name: str = "internal_knowledge"):
@@ -153,11 +152,3 @@ class ChromaRetriever:
             content=documents[i]
         ) for i in top_indices]
 
-def inspect_retrieved_context(chunks: List[DocumentChunk]) -> List[DocumentChunk]:
-    """Ensures no sensitive data slipped through into the RAG context."""
-    safe_chunks = []
-    for chunk in chunks:
-        # If somehow PII got in, drop the chunk
-        if inspect_document_for_ingestion(chunk.content):
-            safe_chunks.append(chunk)
-    return safe_chunks

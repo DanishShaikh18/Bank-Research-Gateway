@@ -199,12 +199,43 @@ class BankResearchGateway:
     def process_request(self, employee_prompt: str) -> str:
         request_id = str(uuid.uuid4())
         start_time = time.time()
-        
+
         try:
+            import asyncio
             from google.adk import Runner
-            runner = Runner(agent=self.agent)
-            result = runner.run(employee_prompt)
-            raw_response = str(result)
+            from google.adk.sessions import InMemorySessionService
+            from google.genai import types as genai_types
+
+            session_service = InMemorySessionService()
+            runner = Runner(
+                agent=self.agent,
+                app_name="bank_gateway",
+                session_service=session_service,
+            )
+
+            async def _run():
+                session = await session_service.create_session(
+                    app_name="bank_gateway",
+                    user_id="employee",
+                    session_id=request_id,
+                )
+                content = genai_types.Content(
+                    role="user",
+                    parts=[genai_types.Part(text=employee_prompt)]
+                )
+                raw_response = ""
+                async for event in runner.run_async(
+                    user_id="employee",
+                    session_id=request_id,
+                    new_message=content,
+                ):
+                    if event.is_final_response() and event.content and event.content.parts:
+                        raw_response = "".join(
+                            p.text for p in event.content.parts if hasattr(p, "text") and p.text
+                        )
+                return raw_response
+
+            raw_response = asyncio.run(_run())
             dlp_categories = []
             status = "success"
         except Exception as e:
@@ -212,16 +243,16 @@ class BankResearchGateway:
             raw_response = "I encountered an error processing your request."
             status = "error"
             dlp_categories = []
-            
+
         self._log_observability(
             request_id=request_id,
-            prompt="[SANITIZED_BY_CALLBACKS]", 
+            prompt="[SANITIZED_BY_CALLBACKS]",
             latency=time.time() - start_time,
             dlp_detected=dlp_categories,
             blocked=False,
             status=status
         )
-        
+
         return raw_response
 
 # Expose agent for ADK CLI

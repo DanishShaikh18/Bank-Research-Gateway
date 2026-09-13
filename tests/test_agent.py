@@ -3,12 +3,28 @@ from app.agent import (
     before_model_callback,
     before_tool_callback,
     after_tool_callback,
-    after_model_callback,
-    MockContext,
-    MockLLMRequest,
-    MockAgentResponse,
-    MockTool
+    after_model_callback
 )
+
+class MockSession:
+    def __init__(self):
+        self.state = {}
+
+class MockContext:
+    def __init__(self):
+        self.session = MockSession()
+
+class MockLLMRequest:
+    def __init__(self, prompt):
+        self.prompt = prompt
+
+class MockAgentResponse:
+    def __init__(self, text):
+        self.text = text
+
+class MockTool:
+    def __init__(self, name):
+        self.name = name
 
 def test_before_model_callback():
     ctx = MockContext()

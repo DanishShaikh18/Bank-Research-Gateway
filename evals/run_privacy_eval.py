@@ -4,8 +4,20 @@ import os
 
 sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
 
-from app.privacy import detect_sensitive_spans, REDACT_TYPES, new_session_key, encrypt_span
-from app.agent import MockContext, MockLLMRequest, before_model_callback, MockTool, before_tool_callback
+from app.privacy import detect_sensitive_spans
+from app.agent import before_model_callback, before_tool_callback
+
+class MockSession:
+    def __init__(self): self.state = {}
+
+class MockContext:
+    def __init__(self): self.session = MockSession()
+
+class MockLLMRequest:
+    def __init__(self, prompt): self.prompt = prompt
+
+class MockTool:
+    def __init__(self, name): self.name = name
 
 def run_eval():
     print("Running Privacy Evaluation...")

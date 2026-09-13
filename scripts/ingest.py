@@ -1,7 +1,7 @@
 """Ingestion entrypoint script for Bank Research Gateway RAG corpus.
 
 Inspects documents for PII/sensitive data (ingestion PII Inspection), chunks them using
-structure-aware markdown parsing, embeds with Gemini Embedding 2 (or mock), and upserts into ChromaDB.
+structure-aware markdown parsing, embeds with local embedding model, and upserts into ChromaDB.
 """
 import os
 import sys
@@ -19,7 +19,7 @@ def should_quarantine(density: float) -> bool:
 
 def main():
     print("Bank Research Gateway RAG Ingestion Pipeline")
-    docs_dir = os.path.join(os.path.dirname(__file__), '..', 'data', 'internal_docs')
+    docs_dir = os.path.join(os.path.dirname(__file__), '..', 'data')
     
     if not os.path.exists(docs_dir):
         print(f"Error: Directory {docs_dir} not found.")

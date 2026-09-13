@@ -11,7 +11,7 @@ def test_structure_aware_chunk():
 def test_mock_embeddings():
     emb = generate_embeddings(["hello", "world"])
     assert len(emb) == 2
-    assert len(emb[0]) in (768, 3072)
+    assert len(emb[0]) in (384, 768, 3072)
 
 def test_chroma_retriever():
     retriever = ChromaRetriever(collection_name="test_collection")

@@ -8,6 +8,7 @@ cryptography>=41.0.0
 
 # Vector Database & Retrieval
 chromadb>=0.5.23
+sentence-transformers>=3.0.0
 
 # Public Research
 tavily-python>=0.8.2
@@ -15,6 +16,10 @@ tavily-python>=0.8.2
 # Configuration & Utilities
 python-dotenv>=1.0.1
 pydantic>=2.10.0
+
+# Web Server
+fastapi>=0.111.0
+uvicorn>=0.29.0
 
 # Testing & Evaluation
 pytest>=8.3.0
